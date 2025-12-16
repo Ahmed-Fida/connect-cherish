@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Eye, EyeOff } from 'lucide-react';
+import { Search, Eye, EyeOff, Sparkles, MapPin, Users } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default function Auth() {
@@ -64,32 +64,65 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <div className="absolute top-4 right-4">
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 left-10 w-72 h-72 bg-primary/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-20 right-10 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-pulse delay-1000" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-primary/10 to-accent/10 rounded-full blur-3xl" />
+      </div>
+      
+      <div className="absolute top-4 right-4 z-10">
         <ThemeToggle />
       </div>
       
-      <div className="w-full max-w-md space-y-6 animate-fade-in">
-        <div className="text-center space-y-2">
-          <div className="flex items-center justify-center gap-2">
-            <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
-              <Search className="w-6 h-6 text-primary-foreground" />
+      <div className="w-full max-w-md space-y-6 animate-fade-in relative z-10">
+        <div className="text-center space-y-4">
+          <div className="flex items-center justify-center gap-3">
+            <div className="w-14 h-14 rounded-2xl gradient-primary flex items-center justify-center shadow-lg shadow-primary/30 pulse-ring">
+              <Search className="w-7 h-7 text-primary-foreground" />
             </div>
-            <h1 className="text-3xl font-bold">FoundIt!</h1>
+            <div>
+              <h1 className="text-4xl font-extrabold bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
+                FoundIt!
+              </h1>
+              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-accent" />
+                Campus Lost & Found
+              </p>
+            </div>
           </div>
-          <p className="text-muted-foreground">Campus Lost & Found Platform</p>
+          
+          <div className="flex justify-center gap-6 text-sm text-muted-foreground">
+            <div className="flex items-center gap-1">
+              <MapPin className="w-4 h-4 text-lost" />
+              <span>Report Lost</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Search className="w-4 h-4 text-found" />
+              <span>Find Items</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Users className="w-4 h-4 text-primary" />
+              <span>Connect</span>
+            </div>
+          </div>
         </div>
 
-        <Card className="border-none shadow-xl">
+        <Card className="border-none shadow-2xl glass">
           <CardHeader className="pb-4">
-            <CardTitle>Welcome</CardTitle>
+            <CardTitle className="text-2xl">Welcome Back</CardTitle>
             <CardDescription>Sign in to your account or create a new one</CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="signin" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted/50">
+                <TabsTrigger value="signin" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  Sign In
+                </TabsTrigger>
+                <TabsTrigger value="signup" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                  Sign Up
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="signin">
@@ -103,6 +136,7 @@ export default function Auth() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      className="bg-background/50 border-border/50 focus:border-primary transition-colors"
                     />
                   </div>
                   <div className="space-y-2">
@@ -115,20 +149,25 @@ export default function Auth() {
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
+                        className="bg-background/50 border-border/50 focus:border-primary transition-colors"
                       />
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 hover:bg-primary/10"
                         onClick={() => setShowPassword(!showPassword)}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
                     </div>
                   </div>
-                  {error && <p className="text-sm text-destructive">{error}</p>}
-                  <Button type="submit" className="w-full gradient-primary" disabled={isLoading}>
+                  {error && (
+                    <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                      <p className="text-sm text-destructive">{error}</p>
+                    </div>
+                  )}
+                  <Button type="submit" className="w-full gradient-primary btn-bounce shadow-lg shadow-primary/30" disabled={isLoading}>
                     {isLoading ? 'Signing in...' : 'Sign In'}
                   </Button>
                 </form>
@@ -145,6 +184,7 @@ export default function Auth() {
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       required
+                      className="bg-background/50 border-border/50 focus:border-primary transition-colors"
                     />
                   </div>
                   <div className="space-y-2">
@@ -156,6 +196,7 @@ export default function Auth() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      className="bg-background/50 border-border/50 focus:border-primary transition-colors"
                     />
                   </div>
                   <div className="space-y-2">
@@ -169,20 +210,25 @@ export default function Auth() {
                         onChange={(e) => setPassword(e.target.value)}
                         required
                         minLength={6}
+                        className="bg-background/50 border-border/50 focus:border-primary transition-colors"
                       />
                       <Button
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 hover:bg-primary/10"
                         onClick={() => setShowPassword(!showPassword)}
                       >
                         {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                       </Button>
                     </div>
                   </div>
-                  {error && <p className="text-sm text-destructive">{error}</p>}
-                  <Button type="submit" className="w-full gradient-primary" disabled={isLoading}>
+                  {error && (
+                    <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                      <p className="text-sm text-destructive">{error}</p>
+                    </div>
+                  )}
+                  <Button type="submit" className="w-full gradient-primary btn-bounce shadow-lg shadow-primary/30" disabled={isLoading}>
                     {isLoading ? 'Creating account...' : 'Create Account'}
                   </Button>
                 </form>
@@ -190,6 +236,10 @@ export default function Auth() {
             </Tabs>
           </CardContent>
         </Card>
+
+        <p className="text-center text-xs text-muted-foreground">
+          By signing up, you agree to help reunite lost items with their owners 💜
+        </p>
       </div>
     </div>
   );
