@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Search, Plus, Filter, X, Upload } from 'lucide-react';
+import { Search, Plus, Filter, X, Upload, Sparkles, MapPin, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRef } from 'react';
 
@@ -73,6 +73,9 @@ export default function Feed() {
     const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
     return matchesSearch && matchesType && matchesCategory;
   });
+
+  const lostCount = items.filter(i => i.type === 'lost').length;
+  const foundCount = items.filter(i => i.type === 'found').length;
 
   const handleClaimClick = (item: Item) => {
     setSelectedItem(item);
@@ -135,7 +138,7 @@ export default function Feed() {
       if (error) throw error;
 
       toast({
-        title: 'Claim submitted!',
+        title: '🎉 Claim submitted!',
         description: 'Your claim has been sent for admin review.',
       });
 
@@ -157,8 +160,10 @@ export default function Feed() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="min-h-screen flex items-center justify-center gradient-bg">
+        <div className="w-12 h-12 rounded-full gradient-primary animate-spin flex items-center justify-center">
+          <div className="w-8 h-8 rounded-full bg-background"></div>
+        </div>
       </div>
     );
   }
@@ -168,98 +173,127 @@ export default function Feed() {
       <Header />
       
       <main className="container py-6">
-        <div className="flex flex-col gap-4 mb-6">
-          <div className="flex items-center justify-between">
+        {/* Hero Section */}
+        <div className="relative mb-8 p-6 rounded-2xl gradient-bg border border-primary/10 overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-accent/10 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+          
+          <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold">Lost & Found Feed</h1>
-              <p className="text-muted-foreground">Browse items on campus</p>
-            </div>
-            <Button onClick={() => navigate('/create')} className="hidden md:flex gradient-primary">
-              <Plus className="mr-2 h-4 w-4" />
-              New Post
-            </Button>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search items..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
+              <h1 className="text-3xl font-extrabold mb-2">
+                <span className="bg-gradient-to-r from-primary via-purple-500 to-pink-500 bg-clip-text text-transparent">
+                  Lost & Found
+                </span>
+                {' '}Feed
+              </h1>
+              <p className="text-muted-foreground">Help reunite items with their owners on campus</p>
+              
+              <div className="flex gap-4 mt-4">
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-lost/10 border border-lost/20">
+                  <MapPin className="h-4 w-4 text-lost" />
+                  <span className="text-sm font-medium">{lostCount} Lost</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-found/10 border border-found/20">
+                  <Package className="h-4 w-4 text-found" />
+                  <span className="text-sm font-medium">{foundCount} Found</span>
+                </div>
+              </div>
             </div>
             
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowFilters(!showFilters)}
-                className="sm:hidden"
-              >
-                <Filter className="h-4 w-4" />
-              </Button>
-              
-              <div className={`flex gap-2 ${showFilters ? 'flex' : 'hidden sm:flex'}`}>
-                <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ItemType | 'all')}>
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="Type" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="lost">Lost</SelectItem>
-                    <SelectItem value="found">Found</SelectItem>
-                  </SelectContent>
-                </Select>
+            <Button onClick={() => navigate('/create')} className="gradient-primary btn-bounce shadow-xl shadow-primary/30 hidden md:flex">
+              <Plus className="mr-2 h-5 w-5" />
+              Report Item
+            </Button>
+          </div>
+        </div>
 
-                <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as ItemCategory | 'all')}>
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Category" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-popover">
-                    <SelectItem value="all">All Categories</SelectItem>
-                    {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        {/* Search & Filters */}
+        <div className="flex flex-col sm:flex-row gap-3 mb-6">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search items..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-card border-border/50 focus:border-primary"
+            />
+          </div>
+          
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowFilters(!showFilters)}
+              className={`sm:hidden ${showFilters ? 'bg-primary text-primary-foreground' : ''}`}
+            >
+              <Filter className="h-4 w-4" />
+            </Button>
+            
+            <div className={`flex gap-2 ${showFilters ? 'flex' : 'hidden sm:flex'}`}>
+              <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v as ItemType | 'all')}>
+                <SelectTrigger className="w-[120px] bg-card">
+                  <SelectValue placeholder="Type" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="lost">🔍 Lost</SelectItem>
+                  <SelectItem value="found">✨ Found</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v as ItemCategory | 'all')}>
+                <SelectTrigger className="w-[140px] bg-card">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover">
+                  <SelectItem value="all">All Categories</SelectItem>
+                  {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
 
+        {/* Items Grid */}
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {[...Array(8)].map((_, i) => (
-              <div key={i} className="h-80 bg-muted animate-pulse rounded-lg" />
+              <div key={i} className="h-80 rounded-xl shimmer" />
             ))}
           </div>
         ) : filteredItems.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">No items found matching your criteria.</p>
+          <div className="text-center py-16">
+            <div className="w-20 h-20 mx-auto mb-4 rounded-full gradient-bg flex items-center justify-center">
+              <Search className="h-10 w-10 text-primary/50" />
+            </div>
+            <p className="text-xl font-semibold mb-2">No items found</p>
+            <p className="text-muted-foreground">Try adjusting your search or filters</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {filteredItems.map((item) => (
-              <ItemCard
-                key={item.id}
-                item={item}
-                onView={() => navigate(`/item/${item.id}`)}
-                onClaim={() => handleClaimClick(item)}
-                showClaimButton={item.type === 'found' && item.created_by !== user?.id}
-              />
+            {filteredItems.map((item, index) => (
+              <div key={item.id} className="animate-fade-in" style={{ animationDelay: `${index * 50}ms` }}>
+                <ItemCard
+                  item={item}
+                  onView={() => navigate(`/item/${item.id}`)}
+                  onClaim={() => handleClaimClick(item)}
+                  showClaimButton={item.type === 'found' && item.created_by !== user?.id}
+                />
+              </div>
             ))}
           </div>
         )}
 
         {role === 'admin' && (
-          <div className="mt-8 p-4 rounded-lg bg-primary/10 border border-primary/20">
-            <p className="text-sm font-medium">
+          <div className="mt-8 p-4 rounded-xl gradient-primary text-primary-foreground shadow-xl">
+            <p className="font-semibold flex items-center gap-2">
+              <Sparkles className="h-5 w-5" />
               You're an admin!{' '}
-              <Button variant="link" className="p-0 h-auto" onClick={() => navigate('/admin')}>
-                Go to Admin Dashboard →
+              <Button variant="secondary" size="sm" onClick={() => navigate('/admin')} className="ml-2 btn-bounce">
+                Go to Dashboard →
               </Button>
             </p>
           </div>
@@ -269,14 +303,19 @@ export default function Feed() {
       <MobileNav />
 
       <Dialog open={claimDialogOpen} onOpenChange={setClaimDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md glass">
           <DialogHeader>
-            <DialogTitle>Claim Item</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Claim Item
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Claiming: <strong>{selectedItem?.title}</strong>
-            </p>
+            <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+              <p className="text-sm font-medium">
+                Claiming: <strong>{selectedItem?.title}</strong>
+              </p>
+            </div>
             
             <div className="space-y-2">
               <Label htmlFor="claim-message">Why is this yours?</Label>
@@ -286,6 +325,7 @@ export default function Feed() {
                 value={claimMessage}
                 onChange={(e) => setClaimMessage(e.target.value)}
                 rows={3}
+                className="bg-background/50"
               />
             </div>
 
@@ -303,17 +343,17 @@ export default function Feed() {
               {claimImagePreviews.length > 0 && (
                 <div className="flex gap-2 mb-2">
                   {claimImagePreviews.map((url, index) => (
-                    <div key={index} className="relative w-20 h-20">
+                    <div key={index} className="relative w-20 h-20 group">
                       <img
                         src={url}
                         alt={`Proof ${index + 1}`}
-                        className="w-full h-full object-cover rounded"
+                        className="w-full h-full object-cover rounded-lg"
                       />
                       <Button
                         type="button"
                         variant="destructive"
                         size="icon"
-                        className="absolute -top-2 -right-2 h-5 w-5 rounded-full"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                         onClick={() => removeClaimImage(index)}
                       >
                         <X className="h-3 w-3" />
@@ -329,6 +369,7 @@ export default function Feed() {
                   variant="outline"
                   size="sm"
                   onClick={() => fileInputRef.current?.click()}
+                  className="btn-bounce"
                 >
                   <Upload className="mr-2 h-3 w-3" />
                   Add Proof Image
@@ -336,13 +377,14 @@ export default function Feed() {
               )}
             </div>
 
-            <div className="flex gap-2 justify-end">
+            <div className="flex gap-2 justify-end pt-2">
               <Button variant="outline" onClick={() => setClaimDialogOpen(false)}>
                 Cancel
               </Button>
               <Button
                 onClick={handleSubmitClaim}
                 disabled={!claimMessage.trim() || isSubmittingClaim}
+                className="gradient-primary btn-bounce"
               >
                 {isSubmittingClaim ? 'Submitting...' : 'Submit Claim'}
               </Button>
