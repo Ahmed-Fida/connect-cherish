@@ -47,12 +47,31 @@ export default function AdminDashboard() {
     const [pendingRes, allRes, claimsRes] = await Promise.all([
       supabase.from('items').select('*').eq('status', 'pending').order('created_at', { ascending: false }),
       supabase.from('items').select('*').neq('status', 'pending').order('created_at', { ascending: false }),
-      supabase.from('claims').select('*, items(*), profiles:claimant_id(full_name, email)').eq('status', 'pending').order('created_at', { ascending: false }),
+      supabase.from('claims').select('*, items(*)').eq('status', 'pending').order('created_at', { ascending: false }),
     ]);
 
     setPendingItems(pendingRes.data || []);
     setAllItems(allRes.data || []);
-    setClaims(claimsRes.data || []);
+    
+    // Fetch profile info for each claim
+    const claimsData = claimsRes.data || [];
+    if (claimsData.length > 0) {
+      const claimantIds = [...new Set(claimsData.map(c => c.claimant_id))];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('id', claimantIds);
+      
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+      const claimsWithProfiles = claimsData.map(claim => ({
+        ...claim,
+        profiles: profileMap.get(claim.claimant_id) || { full_name: 'Unknown', email: '' }
+      }));
+      setClaims(claimsWithProfiles);
+    } else {
+      setClaims([]);
+    }
+    
     setIsLoading(false);
   };
 
