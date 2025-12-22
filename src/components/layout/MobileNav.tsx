@@ -19,11 +19,10 @@ export function MobileNav({ className }: MobileNavProps) {
 
   const adminLinks = [
     { href: '/admin', icon: Shield, label: 'Dashboard' },
-    { href: '/admin/pending', icon: FileText, label: 'Pending' },
-    { href: '/admin/claims', icon: FileText, label: 'Claims' },
+    { href: '/', icon: Home, label: 'Feed' },
   ];
 
-  const links = role === 'admin' ? [...adminLinks, ...studentLinks.slice(0, 1)] : studentLinks;
+  const links = role === 'admin' ? adminLinks : studentLinks;
 
   return (
     <nav className={cn('fixed bottom-0 left-0 right-0 z-50 border-t bg-card md:hidden', className)}>
