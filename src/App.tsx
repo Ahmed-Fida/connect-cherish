@@ -30,6 +30,8 @@ const App = () => (
               <Route path="/my-posts" element={<MyPosts />} />
               <Route path="/item/:id" element={<ItemDetail />} />
               <Route path="/admin" element={<AdminDashboard />} />
+              <Route path="/admin/pending" element={<AdminDashboard />} />
+              <Route path="/admin/claims" element={<AdminDashboard />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
