@@ -28,6 +28,8 @@ export interface Item {
   found_by: string | null;
   found_location: string | null;
   found_at: string | null;
+  found_images: string[];
+  found_message: string | null;
   created_at: string;
   updated_at: string;
   profiles?: Profile;
@@ -57,9 +59,9 @@ export const CATEGORY_LABELS: Record<ItemCategory, string> = {
 
 export const STATUS_LABELS: Record<ItemStatus, string> = {
   pending: 'Pending Review',
-  approved: 'Open',
+  approved: 'Lost',
   rejected: 'Rejected',
   claimed: 'Claimed',
   resolved: 'Resolved',
-  found: 'Found',
+  found: 'Potentially Found',
 };

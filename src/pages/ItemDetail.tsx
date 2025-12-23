@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Item, CATEGORY_LABELS, STATUS_LABELS } from '@/types/database';
+import { Item, Claim, CATEGORY_LABELS, STATUS_LABELS } from '@/types/database';
 import { Header } from '@/components/layout/Header';
 import { MobileNav } from '@/components/layout/MobileNav';
 import { Button } from '@/components/ui/button';
@@ -12,11 +12,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, MapPin, Calendar, User, Upload, X, Search } from 'lucide-react';
+import { ArrowLeft, MapPin, Calendar, User, Upload, X, Search, CheckCircle, XCircle, Eye, Lock } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useRef } from 'react';
 
 export default function ItemDetail() {
   const { id } = useParams();
@@ -24,23 +23,39 @@ export default function ItemDetail() {
   const { user } = useAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const foundImageInputRef = useRef<HTMLInputElement>(null);
 
   const [item, setItem] = useState<Item | null>(null);
   const [poster, setPoster] = useState<{ full_name: string } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
+  // Claim dialog state (for found items)
   const [claimDialogOpen, setClaimDialogOpen] = useState(false);
   const [claimMessage, setClaimMessage] = useState('');
   const [claimImages, setClaimImages] = useState<File[]>([]);
   const [claimImagePreviews, setClaimImagePreviews] = useState<string[]>([]);
   const [isSubmittingClaim, setIsSubmittingClaim] = useState(false);
 
-  // "I Found It" state
+  // "I Found It" state (enhanced with photos)
   const [foundDialogOpen, setFoundDialogOpen] = useState(false);
   const [foundLocation, setFoundLocation] = useState('');
+  const [foundMessage, setFoundMessage] = useState('');
+  const [foundImages, setFoundImages] = useState<File[]>([]);
+  const [foundImagePreviews, setFoundImagePreviews] = useState<string[]>([]);
   const [isSubmittingFound, setIsSubmittingFound] = useState(false);
   const [finder, setFinder] = useState<{ full_name: string } | null>(null);
+
+  // Owner claim proof state
+  const [ownerClaimDialogOpen, setOwnerClaimDialogOpen] = useState(false);
+  const [ownerClaimMessage, setOwnerClaimMessage] = useState('');
+  const [ownerClaimImages, setOwnerClaimImages] = useState<File[]>([]);
+  const [ownerClaimImagePreviews, setOwnerClaimImagePreviews] = useState<string[]>([]);
+  const [isSubmittingOwnerClaim, setIsSubmittingOwnerClaim] = useState(false);
+  const ownerClaimInputRef = useRef<HTMLInputElement>(null);
+
+  // Owner's claim on this item (if any)
+  const [ownerClaim, setOwnerClaim] = useState<Claim | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -62,7 +77,7 @@ export default function ItemDetail() {
       return;
     }
 
-    setItem(itemData);
+    setItem(itemData as Item);
 
     const { data: profileData } = await supabase
       .from('profiles')
@@ -82,7 +97,41 @@ export default function ItemDetail() {
       setFinder(finderData);
     }
 
+    // Fetch owner's claim if item is in "found" status
+    if (itemData.status === 'found' && itemData.type === 'lost') {
+      const { data: claimData } = await supabase
+        .from('claims')
+        .select('*')
+        .eq('item_id', itemData.id)
+        .eq('claimant_id', itemData.created_by)
+        .maybeSingle();
+      
+      setOwnerClaim(claimData as Claim | null);
+    }
+
     setIsLoading(false);
+  };
+
+  // Handle found images selection
+  const handleFoundImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length + foundImages.length > 3) {
+      toast({
+        title: 'Too many images',
+        description: 'You can upload a maximum of 3 images.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const newImages = [...foundImages, ...files].slice(0, 3);
+    setFoundImages(newImages);
+    setFoundImagePreviews(newImages.map((file) => URL.createObjectURL(file)));
+  };
+
+  const removeFoundImage = (index: number) => {
+    setFoundImages(foundImages.filter((_, i) => i !== index));
+    setFoundImagePreviews(foundImagePreviews.filter((_, i) => i !== index));
   };
 
   const handleClaimImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -104,6 +153,28 @@ export default function ItemDetail() {
   const removeClaimImage = (index: number) => {
     setClaimImages(claimImages.filter((_, i) => i !== index));
     setClaimImagePreviews(claimImagePreviews.filter((_, i) => i !== index));
+  };
+
+  // Owner claim proof image handling
+  const handleOwnerClaimImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length + ownerClaimImages.length > 3) {
+      toast({
+        title: 'Too many images',
+        description: 'You can upload a maximum of 3 proof images.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const newImages = [...ownerClaimImages, ...files].slice(0, 3);
+    setOwnerClaimImages(newImages);
+    setOwnerClaimImagePreviews(newImages.map((file) => URL.createObjectURL(file)));
+  };
+
+  const removeOwnerClaimImage = (index: number) => {
+    setOwnerClaimImages(ownerClaimImages.filter((_, i) => i !== index));
+    setOwnerClaimImagePreviews(ownerClaimImagePreviews.filter((_, i) => i !== index));
   };
 
   const handleSubmitClaim = async () => {
@@ -160,18 +231,40 @@ export default function ItemDetail() {
     }
   };
 
+  // Enhanced "I Found It" with photos
   const handleSubmitFound = async () => {
     if (!user || !item) return;
 
     setIsSubmittingFound(true);
 
     try {
+      // Upload finder's images
+      const imageUrls: string[] = [];
+      
+      for (const image of foundImages) {
+        const fileExt = image.name.split('.').pop();
+        const fileName = `found/${user.id}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('item-images')
+          .upload(fileName, image);
+
+        if (!uploadError) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('item-images')
+            .getPublicUrl(fileName);
+          imageUrls.push(publicUrl);
+        }
+      }
+
       const { error } = await supabase
         .from('items')
         .update({
           status: 'found',
           found_by: user.id,
           found_location: foundLocation,
+          found_message: foundMessage || null,
+          found_images: imageUrls,
           found_at: new Date().toISOString(),
         })
         .eq('id', item.id);
@@ -179,13 +272,16 @@ export default function ItemDetail() {
       if (error) throw error;
 
       toast({
-        title: 'Marked as Found!',
-        description: 'The owner has been notified. They can now claim their item.',
+        title: 'Marked as Potentially Found!',
+        description: 'The owner has been notified. They can now submit claim proof.',
       });
 
       setFoundDialogOpen(false);
       setFoundLocation('');
-      fetchItem(); // Refresh the item data
+      setFoundMessage('');
+      setFoundImages([]);
+      setFoundImagePreviews([]);
+      fetchItem();
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -194,6 +290,120 @@ export default function ItemDetail() {
       });
     } finally {
       setIsSubmittingFound(false);
+    }
+  };
+
+  // Owner submits claim proof
+  const handleSubmitOwnerClaim = async () => {
+    if (!user || !item) return;
+
+    setIsSubmittingOwnerClaim(true);
+
+    try {
+      const proofUrls: string[] = [];
+      
+      for (const image of ownerClaimImages) {
+        const fileExt = image.name.split('.').pop();
+        const fileName = `claims/${user.id}/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+        
+        const { error: uploadError } = await supabase.storage
+          .from('item-images')
+          .upload(fileName, image);
+
+        if (!uploadError) {
+          const { data: { publicUrl } } = supabase.storage
+            .from('item-images')
+            .getPublicUrl(fileName);
+          proofUrls.push(publicUrl);
+        }
+      }
+
+      const { error } = await supabase.from('claims').insert({
+        item_id: item.id,
+        claimant_id: user.id,
+        message: ownerClaimMessage,
+        proof_image_urls: proofUrls,
+        status: 'pending',
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Claim proof submitted!',
+        description: 'The finder will review your proof.',
+      });
+
+      setOwnerClaimDialogOpen(false);
+      setOwnerClaimMessage('');
+      setOwnerClaimImages([]);
+      setOwnerClaimImagePreviews([]);
+      fetchItem();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to submit claim proof.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmittingOwnerClaim(false);
+    }
+  };
+
+  // Finder approves the claim
+  const handleApproveClaim = async () => {
+    if (!item || !ownerClaim) return;
+
+    try {
+      // Update claim status
+      await supabase
+        .from('claims')
+        .update({ status: 'approved' })
+        .eq('id', ownerClaim.id);
+
+      // Mark item as resolved
+      await supabase
+        .from('items')
+        .update({ status: 'resolved' })
+        .eq('id', item.id);
+
+      toast({
+        title: 'Claim Approved!',
+        description: 'The item has been marked as resolved.',
+      });
+
+      fetchItem();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to approve claim.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Finder rejects the claim
+  const handleRejectClaim = async () => {
+    if (!item || !ownerClaim) return;
+
+    try {
+      await supabase
+        .from('claims')
+        .update({ status: 'rejected' })
+        .eq('id', ownerClaim.id);
+
+      toast({
+        title: 'Claim Rejected',
+        description: 'The owner can submit new claim proof.',
+      });
+
+      setOwnerClaim(null);
+      fetchItem();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to reject claim.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -217,6 +427,8 @@ export default function ItemDetail() {
   const isLost = item.type === 'lost';
   const isResolved = item.status === 'claimed' || item.status === 'resolved';
   const isFound = item.status === 'found';
+  const isOwner = user?.id === item.created_by;
+  const isFinder = user?.id === item.found_by;
   
   // For "found" type items, users can claim if not resolved
   const canClaim = item.type === 'found' && !isResolved && item.created_by !== user?.id;
@@ -224,8 +436,11 @@ export default function ItemDetail() {
   // For "lost" type items, other users can mark as found if status is "approved"
   const canMarkAsFound = item.type === 'lost' && item.status === 'approved' && user && item.created_by !== user.id;
   
-  // Owner can claim their own lost item after someone found it
-  const canClaimOwnLostItem = item.type === 'lost' && isFound && user && item.created_by === user.id;
+  // Owner can submit claim proof after someone found it (if no pending claim exists)
+  const canSubmitClaimProof = isLost && isFound && isOwner && (!ownerClaim || ownerClaim.status === 'rejected');
+  
+  // Finder can approve/reject owner's pending claim
+  const canReviewClaim = isLost && isFound && isFinder && ownerClaim?.status === 'pending';
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-6">
@@ -281,7 +496,12 @@ export default function ItemDetail() {
                   >
                     {isLost ? 'Lost' : 'Found'}
                   </Badge>
-                  <Badge variant={isResolved ? 'secondary' : 'outline'}>
+                  <Badge 
+                    variant={isResolved ? 'secondary' : 'outline'}
+                    className={cn(
+                      isFound && 'bg-amber-500/20 text-amber-700 border-amber-500/30'
+                    )}
+                  >
                     {STATUS_LABELS[item.status]}
                   </Badge>
                   <Badge variant="outline">
@@ -300,26 +520,14 @@ export default function ItemDetail() {
                 {canMarkAsFound && (
                   <Button onClick={() => setFoundDialogOpen(true)} className="bg-found text-found-foreground hover:bg-found/90">
                     <Search className="mr-2 h-4 w-4" />
-                    I Found It
+                    I Found This Item
                   </Button>
                 )}
                 
-                {canClaimOwnLostItem && (
-                  <Button onClick={async () => {
-                    const { error } = await supabase
-                      .from('items')
-                      .update({ status: 'claimed' })
-                      .eq('id', item.id);
-                    
-                    if (!error) {
-                      toast({
-                        title: 'Item Claimed!',
-                        description: 'Your item has been marked as claimed.',
-                      });
-                      fetchItem();
-                    }
-                  }} className="gradient-primary">
-                    Claim My Item
+                {canSubmitClaimProof && (
+                  <Button onClick={() => setOwnerClaimDialogOpen(true)} className="gradient-primary">
+                    <Eye className="mr-2 h-4 w-4" />
+                    Submit Claim Proof
                   </Button>
                 )}
               </div>
@@ -342,27 +550,110 @@ export default function ItemDetail() {
               </div>
             </div>
 
-            {/* Show found info if someone found this lost item */}
-            {isLost && isFound && item.found_location && (
-              <div className="p-4 bg-found/10 border border-found/20 rounded-lg space-y-2">
-                <h3 className="font-semibold text-found flex items-center gap-2">
+            {/* Show finder's submission to owner and finder */}
+            {isLost && isFound && (isOwner || isFinder) && (
+              <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg space-y-3">
+                <h3 className="font-semibold text-amber-700 flex items-center gap-2">
                   <Search className="h-4 w-4" />
-                  Good News! This item has been found
+                  Item Potentially Found
                 </h3>
-                <div className="text-sm text-muted-foreground space-y-1">
-                  <p><strong>Found at:</strong> {item.found_location}</p>
-                  {item.found_at && (
-                    <p><strong>Found on:</strong> {format(new Date(item.found_at), 'MMMM d, yyyy')}</p>
-                  )}
+                <div className="text-sm text-muted-foreground space-y-2">
                   {finder && (
                     <p><strong>Found by:</strong> {finder.full_name}</p>
                   )}
+                  <p><strong>Location:</strong> {item.found_location}</p>
+                  {item.found_at && (
+                    <p><strong>Date:</strong> {format(new Date(item.found_at), 'MMMM d, yyyy')}</p>
+                  )}
+                  {item.found_message && (
+                    <p><strong>Message:</strong> {item.found_message}</p>
+                  )}
+                  
+                  {/* Finder's photos */}
+                  {item.found_images && item.found_images.length > 0 && (
+                    <div className="mt-3">
+                      <p className="font-medium mb-2">Finder's Photos:</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {item.found_images.map((url, index) => (
+                          <img
+                            key={index}
+                            src={url}
+                            alt={`Found item ${index + 1}`}
+                            className="w-24 h-24 object-cover rounded-lg border"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                {canClaimOwnLostItem && (
+
+                {/* Owner's claim proof (visible to both owner and finder) */}
+                {ownerClaim && ownerClaim.status === 'pending' && (
+                  <div className="mt-4 p-3 bg-background rounded-lg border">
+                    <h4 className="font-medium mb-2">Owner's Claim Proof:</h4>
+                    <p className="text-sm text-muted-foreground mb-2">{ownerClaim.message}</p>
+                    {ownerClaim.proof_image_urls && ownerClaim.proof_image_urls.length > 0 && (
+                      <div className="flex gap-2 flex-wrap mb-3">
+                        {ownerClaim.proof_image_urls.map((url, index) => (
+                          <img
+                            key={index}
+                            src={url}
+                            alt={`Proof ${index + 1}`}
+                            className="w-20 h-20 object-cover rounded-lg border"
+                          />
+                        ))}
+                      </div>
+                    )}
+                    
+                    {/* Finder's approval buttons */}
+                    {canReviewClaim && (
+                      <div className="flex gap-2 mt-3">
+                        <Button 
+                          onClick={handleApproveClaim}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <CheckCircle className="mr-2 h-4 w-4" />
+                          Approve Claim
+                        </Button>
+                        <Button 
+                          variant="destructive"
+                          onClick={handleRejectClaim}
+                        >
+                          <XCircle className="mr-2 h-4 w-4" />
+                          Reject Claim
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Show rejected claim status to owner */}
+                {ownerClaim?.status === 'rejected' && isOwner && (
+                  <div className="mt-4 p-3 bg-destructive/10 rounded-lg border border-destructive/20">
+                    <p className="text-sm text-destructive">
+                      Your previous claim was rejected. You can submit new proof.
+                    </p>
+                  </div>
+                )}
+
+                {isOwner && !ownerClaim && (
                   <p className="text-sm text-muted-foreground mt-2">
-                    Click "Claim My Item" above to mark this as claimed.
+                    Click "Submit Claim Proof" to prove ownership and claim your item.
                   </p>
                 )}
+              </div>
+            )}
+
+            {/* Resolved status badge */}
+            {isResolved && (
+              <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+                <h3 className="font-semibold text-green-700 flex items-center gap-2">
+                  <Lock className="h-4 w-4" />
+                  This item has been resolved
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  The owner has successfully claimed this item.
+                </p>
               </div>
             )}
           </CardContent>
@@ -371,6 +662,7 @@ export default function ItemDetail() {
 
       <MobileNav />
 
+      {/* Claim Dialog for Found Items */}
       <Dialog open={claimDialogOpen} onOpenChange={setClaimDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -454,7 +746,7 @@ export default function ItemDetail() {
         </DialogContent>
       </Dialog>
 
-      {/* I Found It Dialog */}
+      {/* I Found This Item Dialog (Enhanced) */}
       <Dialog open={foundDialogOpen} onOpenChange={setFoundDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -462,17 +754,75 @@ export default function ItemDetail() {
           </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              You're marking: <strong>{item.title}</strong> as found
+              You're marking: <strong>{item.title}</strong> as potentially found
             </p>
             
             <div className="space-y-2">
-              <Label htmlFor="found-location">Where did you find it?</Label>
+              <Label htmlFor="found-location">Where did you find it? *</Label>
               <Input
                 id="found-location"
                 placeholder="e.g., Library 2nd floor, near the water fountain"
                 value={foundLocation}
                 onChange={(e) => setFoundLocation(e.target.value)}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="found-message">Message (optional)</Label>
+              <Textarea
+                id="found-message"
+                placeholder="Any additional details about how/where you found it..."
+                value={foundMessage}
+                onChange={(e) => setFoundMessage(e.target.value)}
+                rows={2}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Photos of the Found Item</Label>
+              <input
+                type="file"
+                ref={foundImageInputRef}
+                className="hidden"
+                accept="image/*"
+                multiple
+                onChange={handleFoundImageSelect}
+              />
+              
+              {foundImagePreviews.length > 0 && (
+                <div className="flex gap-2 mb-2">
+                  {foundImagePreviews.map((url, index) => (
+                    <div key={index} className="relative w-20 h-20">
+                      <img
+                        src={url}
+                        alt={`Found item ${index + 1}`}
+                        className="w-full h-full object-cover rounded"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-5 w-5 rounded-full"
+                        onClick={() => removeFoundImage(index)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {foundImages.length < 3 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => foundImageInputRef.current?.click()}
+                >
+                  <Upload className="mr-2 h-3 w-3" />
+                  Add Photo
+                </Button>
+              )}
             </div>
 
             <div className="flex gap-2 justify-end">
@@ -484,7 +834,91 @@ export default function ItemDetail() {
                 disabled={!foundLocation.trim() || isSubmittingFound}
                 className="bg-found text-found-foreground hover:bg-found/90"
               >
-                {isSubmittingFound ? 'Submitting...' : 'Mark as Found'}
+                {isSubmittingFound ? 'Submitting...' : 'Submit'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Owner Submit Claim Proof Dialog */}
+      <Dialog open={ownerClaimDialogOpen} onOpenChange={setOwnerClaimDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Submit Claim Proof</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Prove that <strong>{item.title}</strong> belongs to you
+            </p>
+            
+            <div className="space-y-2">
+              <Label htmlFor="owner-claim-message">Proof of Ownership *</Label>
+              <Textarea
+                id="owner-claim-message"
+                placeholder="Describe identifying features, provide serial numbers, or explain how you can prove this is yours..."
+                value={ownerClaimMessage}
+                onChange={(e) => setOwnerClaimMessage(e.target.value)}
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Proof Images (e.g., original photo, receipt)</Label>
+              <input
+                type="file"
+                ref={ownerClaimInputRef}
+                className="hidden"
+                accept="image/*"
+                multiple
+                onChange={handleOwnerClaimImageSelect}
+              />
+              
+              {ownerClaimImagePreviews.length > 0 && (
+                <div className="flex gap-2 mb-2">
+                  {ownerClaimImagePreviews.map((url, index) => (
+                    <div key={index} className="relative w-20 h-20">
+                      <img
+                        src={url}
+                        alt={`Proof ${index + 1}`}
+                        className="w-full h-full object-cover rounded"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-5 w-5 rounded-full"
+                        onClick={() => removeOwnerClaimImage(index)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {ownerClaimImages.length < 3 && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => ownerClaimInputRef.current?.click()}
+                >
+                  <Upload className="mr-2 h-3 w-3" />
+                  Add Proof Image
+                </Button>
+              )}
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setOwnerClaimDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSubmitOwnerClaim}
+                disabled={!ownerClaimMessage.trim() || isSubmittingOwnerClaim}
+              >
+                {isSubmittingOwnerClaim ? 'Submitting...' : 'Submit Proof'}
               </Button>
             </div>
           </div>

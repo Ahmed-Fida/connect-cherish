@@ -66,7 +66,9 @@ export type Database = {
           description: string
           found_at: string | null
           found_by: string | null
+          found_images: string[] | null
           found_location: string | null
+          found_message: string | null
           id: string
           image_urls: string[] | null
           item_date: string
@@ -84,7 +86,9 @@ export type Database = {
           description: string
           found_at?: string | null
           found_by?: string | null
+          found_images?: string[] | null
           found_location?: string | null
+          found_message?: string | null
           id?: string
           image_urls?: string[] | null
           item_date?: string
@@ -102,7 +106,9 @@ export type Database = {
           description?: string
           found_at?: string | null
           found_by?: string | null
+          found_images?: string[] | null
           found_location?: string | null
+          found_message?: string | null
           id?: string
           image_urls?: string[] | null
           item_date?: string
