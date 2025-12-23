@@ -231,7 +231,7 @@ export default function ItemDetail() {
     }
   };
 
-  // Enhanced "I Found It" with photos
+  // Enhanced "I Found It" with photos - uses edge function to bypass RLS
   const handleSubmitFound = async () => {
     if (!user || !item) return;
 
@@ -257,19 +257,30 @@ export default function ItemDetail() {
         }
       }
 
-      const { error } = await supabase
-        .from('items')
-        .update({
-          status: 'found',
-          found_by: user.id,
-          found_location: foundLocation,
-          found_message: foundMessage || null,
-          found_images: imageUrls,
-          found_at: new Date().toISOString(),
-        })
-        .eq('id', item.id);
+      // Call edge function to update the item (bypasses RLS)
+      const { data: session } = await supabase.auth.getSession();
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/mark-item-found`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.session?.access_token}`,
+          },
+          body: JSON.stringify({
+            itemId: item.id,
+            foundLocation,
+            foundMessage: foundMessage || null,
+            foundImages: imageUrls,
+          }),
+        }
+      );
 
-      if (error) throw error;
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to mark as found');
+      }
 
       toast({
         title: 'Marked as Potentially Found!',
