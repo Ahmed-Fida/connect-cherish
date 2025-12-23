@@ -1,5 +1,5 @@
 export type ItemType = 'lost' | 'found';
-export type ItemStatus = 'pending' | 'approved' | 'rejected' | 'claimed' | 'resolved';
+export type ItemStatus = 'pending' | 'approved' | 'rejected' | 'claimed' | 'resolved' | 'found';
 export type ClaimStatus = 'pending' | 'approved' | 'rejected';
 export type ItemCategory = 'stationery' | 'electronics' | 'clothing' | 'id_docs' | 'other';
 export type AppRole = 'student' | 'admin';
@@ -25,6 +25,9 @@ export interface Item {
   created_by: string;
   status: ItemStatus;
   rejection_note: string | null;
+  found_by: string | null;
+  found_location: string | null;
+  found_at: string | null;
   created_at: string;
   updated_at: string;
   profiles?: Profile;
@@ -58,4 +61,5 @@ export const STATUS_LABELS: Record<ItemStatus, string> = {
   rejected: 'Rejected',
   claimed: 'Claimed',
   resolved: 'Resolved',
+  found: 'Found',
 };
