@@ -180,7 +180,13 @@ export type Database = {
         | "clothing"
         | "id_docs"
         | "other"
-      item_status: "pending" | "approved" | "rejected" | "claimed" | "resolved"
+      item_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "claimed"
+        | "resolved"
+        | "found"
       item_type: "lost" | "found"
     }
     CompositeTypes: {
@@ -318,7 +324,14 @@ export const Constants = {
         "id_docs",
         "other",
       ],
-      item_status: ["pending", "approved", "rejected", "claimed", "resolved"],
+      item_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "claimed",
+        "resolved",
+        "found",
+      ],
       item_type: ["lost", "found"],
     },
   },
