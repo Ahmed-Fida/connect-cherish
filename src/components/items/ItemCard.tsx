@@ -2,12 +2,12 @@ import { Item, CATEGORY_LABELS, STATUS_LABELS } from '@/types/database';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MapPin, Calendar, Eye, Sparkles } from 'lucide-react';
+import { MapPin, Calendar, Eye, Sparkles, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 interface ItemCardProps {
-  item: Item;
+  item: Item & { finder?: { full_name: string } | null };
   onView?: () => void;
   onClaim?: () => void;
   showClaimButton?: boolean;
@@ -16,6 +16,7 @@ interface ItemCardProps {
 export function ItemCard({ item, onView, onClaim, showClaimButton }: ItemCardProps) {
   const isLost = item.type === 'lost';
   const isResolved = item.status === 'claimed' || item.status === 'resolved';
+  const isFound = item.status === 'found';
 
   return (
     <Card
@@ -85,15 +86,25 @@ export function ItemCard({ item, onView, onClaim, showClaimButton }: ItemCardPro
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
 
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <MapPin className="h-3 w-3 text-lost" />
-            <span className="line-clamp-1">{item.location}</span>
+        <div className="flex flex-col gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-1">
+              <MapPin className="h-3 w-3 text-lost" />
+              <span className="line-clamp-1">{item.location}</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Calendar className="h-3 w-3 text-found" />
+              <span>{format(new Date(item.item_date), 'MMM d')}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-1">
-            <Calendar className="h-3 w-3 text-found" />
-            <span>{format(new Date(item.item_date), 'MMM d')}</span>
-          </div>
+          
+          {/* Show "Found by" for items with status 'found' */}
+          {isFound && item.finder?.full_name && (
+            <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium">
+              <User className="h-3 w-3" />
+              <span>Found by {item.finder.full_name}</span>
+            </div>
+          )}
         </div>
 
         {showClaimButton && !isLost && !isResolved && (
