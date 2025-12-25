@@ -53,13 +53,33 @@ export default function Feed() {
     const { data, error } = await supabase
       .from('items')
       .select('*')
-      .in('status', ['approved', 'claimed', 'resolved'])
+      .in('status', ['approved', 'found', 'claimed', 'resolved'])
       .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching items:', error);
-    } else {
-      setItems(data || []);
+      setItems([]);
+    } else if (data) {
+      // Fetch finder names for items with found_by
+      const finderIds = [...new Set(data.filter(i => i.found_by).map(i => i.found_by))];
+      let finderMap = new Map<string, { full_name: string }>();
+      
+      if (finderIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name')
+          .in('id', finderIds);
+        
+        profiles?.forEach(p => finderMap.set(p.id, { full_name: p.full_name }));
+      }
+      
+      // Attach finder info to items
+      const itemsWithFinder = data.map(item => ({
+        ...item,
+        finder: item.found_by ? finderMap.get(item.found_by) || null : null
+      }));
+      
+      setItems(itemsWithFinder as any);
     }
     setIsLoading(false);
   };

@@ -360,63 +360,7 @@ export default function ItemDetail() {
     }
   };
 
-  // Finder approves the claim
-  const handleApproveClaim = async () => {
-    if (!item || !ownerClaim) return;
-
-    try {
-      // Update claim status
-      await supabase
-        .from('claims')
-        .update({ status: 'approved' })
-        .eq('id', ownerClaim.id);
-
-      // Mark item as resolved
-      await supabase
-        .from('items')
-        .update({ status: 'resolved' })
-        .eq('id', item.id);
-
-      toast({
-        title: 'Claim Approved!',
-        description: 'The item has been marked as resolved.',
-      });
-
-      fetchItem();
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to approve claim.',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  // Finder rejects the claim
-  const handleRejectClaim = async () => {
-    if (!item || !ownerClaim) return;
-
-    try {
-      await supabase
-        .from('claims')
-        .update({ status: 'rejected' })
-        .eq('id', ownerClaim.id);
-
-      toast({
-        title: 'Claim Rejected',
-        description: 'The owner can submit new claim proof.',
-      });
-
-      setOwnerClaim(null);
-      fetchItem();
-    } catch (error: any) {
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to reject claim.',
-        variant: 'destructive',
-      });
-    }
-  };
+  // These functions are removed - admin handles claim approval now via AdminDashboard
 
   if (isLoading) {
     return (
@@ -450,8 +394,7 @@ export default function ItemDetail() {
   // Owner can submit claim proof after someone found it (if no pending claim exists)
   const canSubmitClaimProof = isLost && isFound && isOwner && (!ownerClaim || ownerClaim.status === 'rejected');
   
-  // Finder can approve/reject owner's pending claim
-  const canReviewClaim = isLost && isFound && isFinder && ownerClaim?.status === 'pending';
+  // Admin reviews claims, not finder
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-6">
@@ -616,25 +559,12 @@ export default function ItemDetail() {
                       </div>
                     )}
                     
-                    {/* Finder's approval buttons */}
-                    {canReviewClaim && (
-                      <div className="flex gap-2 mt-3">
-                        <Button 
-                          onClick={handleApproveClaim}
-                          className="bg-green-600 hover:bg-green-700 text-white"
-                        >
-                          <CheckCircle className="mr-2 h-4 w-4" />
-                          Approve Claim
-                        </Button>
-                        <Button 
-                          variant="destructive"
-                          onClick={handleRejectClaim}
-                        >
-                          <XCircle className="mr-2 h-4 w-4" />
-                          Reject Claim
-                        </Button>
-                      </div>
-                    )}
+                    {/* Admin reviews claims now */}
+                    <div className="mt-3 p-2 bg-primary/10 rounded-lg">
+                      <p className="text-sm text-primary font-medium">
+                        Claim pending admin approval
+                      </p>
+                    </div>
                   </div>
                 )}
 
